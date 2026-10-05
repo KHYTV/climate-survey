@@ -143,6 +143,9 @@ button:disabled { opacity: .5; cursor: default; }
 .hero h1 { color: #fff; font-size: 1.6rem; margin: 0; text-shadow: 0 1px 10px rgba(0,0,0,.45); }
 .hero p { color: rgba(255,255,255,.92); margin: 2px 0 0; }
 .hero .cap { font-size: .7rem; color: rgba(255,255,255,.78); margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; }
+.hero-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.hero button { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.55); }
+.hero button:hover { background: rgba(255,255,255,.26); }
 .progress { background: color-mix(in srgb, var(--page) 80%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 
 /* ---------- 결과 슬라이드 ---------- */
@@ -321,9 +324,15 @@ table.list tr.sel td { background: color-mix(in srgb, var(--accent) 8%, transpar
 .badge.open { color: var(--ok); } .badge.closed { color: var(--muted); }
 .fullqr {
   position: fixed; inset: 0; z-index: 100; background: #fff; color: #0b0b0b;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: calc(4vh + 16px) 24px;
 }
-.fullqr .qr { width: min(70vh, 80vw); }
+.fullqr::before, .fullqr::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 4vh;
+  background: url(stripes.svg) center / 100% 100% no-repeat;
+}
+.fullqr::before { top: 0; }
+.fullqr::after { bottom: 0; }
+.fullqr .qr { width: min(62vh, 80vw, calc(100vh - 290px)); min-width: 120px; }
 .fullqr .qr svg { width: 100%; height: auto; display: block; }
 .fullqr .url { font-size: clamp(16px, 2.6vw, 30px); font-weight: 700; }
 @media (max-width: 560px) { .qrbox { grid-template-columns: 1fr; } }

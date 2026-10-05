@@ -5,20 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>교수자 콘솔 · 기후변화 인식 설문</title>
-<link rel="stylesheet" href="assets/app.css?v=8">
+<link rel="stylesheet" href="assets/app.css?v=9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<script src="assets/config.js?v=8"></script>
-<script src="assets/items.js?v=8"></script>
-<script src="assets/stats.js?v=8"></script>
-<script src="assets/api.js?v=8"></script>
+<script src="assets/config.js?v=9"></script>
+<script src="assets/items.js?v=9"></script>
+<script src="assets/stats.js?v=9"></script>
+<script src="assets/api.js?v=9"></script>
 </head>
-<body>
+<body class="stripes-bg">
 <main class="wrap wide">
-  <div class="row" style="justify-content:space-between;margin-top:8px">
-    <h1 style="margin:0">교수자 콘솔</h1>
-    <button id="logout" class="hidden">로그아웃</button>
-  </div>
+  <header class="hero">
+    <div class="hero-row">
+      <div>
+        <h1>교수자 콘솔</h1>
+        <p>기후변화 인식 설문 · 세션 관리</p>
+      </div>
+      <button id="logout" class="hidden">로그아웃</button>
+    </div>
+    <div class="cap"><span>1880</span><span>기후 줄무늬: 지구 평균기온 · 한 줄 = 1년 · NASA GISTEMP v4</span><span>2025</span></div>
+  </header>
   <p id="demo-note" class="ink2 hidden">데모 모드: 서버 없이 가짜 데이터로 동작합니다. 아무 비밀번호나 입력하세요.</p>
 
   <section id="v-login" class="card" style="max-width:420px">
