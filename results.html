@@ -1,113 +1,64 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" class="deck-mode">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>기후변화 인식 결과</title>
-<link rel="stylesheet" href="assets/app.css?v=3">
+<link rel="stylesheet" href="assets/app.css?v=7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="assets/config.js?v=3"></script>
-<script src="assets/items.js?v=3"></script>
-<script src="assets/stats.js?v=3"></script>
-<script src="assets/api.js?v=3"></script>
-<script src="assets/charts.js?v=3"></script>
+<script src="assets/config.js?v=7"></script>
+<script src="assets/items.js?v=7"></script>
+<script src="assets/stats.js?v=7"></script>
+<script src="assets/api.js?v=7"></script>
+<script src="assets/charts.js?v=7"></script>
 </head>
-<body class="dash">
-<main class="wrap wide">
-  <div class="dash-head" style="margin-top:8px">
-    <div>
-      <h1>우리 반 기후변화 인식 — 한국·미국과 비교</h1>
-      <p id="meta" class="ink2" style="margin:0"></p>
-    </div>
-    <button id="reload" class="hidden">새로고침</button>
-  </div>
-
-  <p id="state" class="card ink2">불러오는 중…</p>
-
-  <div id="dash" class="hidden">
-    <nav>
-      <a href="#sum">요약</a><a href="#us">미국 비교</a><a href="#seg">6개 유형</a>
-      <a href="#kei">한국 비교</a><a href="#src">출처·주의</a>
-    </nav>
-
-    <section id="sum">
-      <div class="card">
-        <h3>심리적 거리 — ‘미래 세대’와 ‘나 자신’의 피해 인식 차이</h3>
-        <p class="sub">‘피해를 받을 것’이라는 응답 비율의 차이(%p). 클수록 기후 피해를 먼 미래·남의 일로 느끼는 경향.</p>
-        <div class="tiles" id="tiles"></div>
-      </div>
-      <div class="card">
-        <h3>가장 차이가 큰 항목</h3>
-        <p class="sub">우리 반과 비교 집단의 차이가 큰 순서 (토론 출발점)</p>
-        <ul class="gaps" id="gaps"></ul>
-      </div>
-    </section>
-
-    <section id="us">
-      <h2 style="margin-top:28px">① 미국 국민과 같은 질문 — Yale SASSY 4문항</h2>
-      <div class="card"><div id="c-sassy"></div></div>
-    </section>
-
-    <section id="seg">
-      <h2 style="margin-top:28px">② ‘기후 여론의 6개 유형’ (Global Warming’s Six Americas)</h2>
-      <div class="card" id="seg-card">
-        <div id="c-seg"></div>
-        <div id="seg-setup">
-          <p>Yale의 공식 분류 방식은 공개되어 있지 않아, <b>Yale SASSY 그룹 툴</b>로 분류한 결과를 불러와야 표시됩니다.</p>
-          <ol class="small ink2" style="padding-left:1.2em">
-            <li>교수자 콘솔에서 <b>SASSY 분류용 CSV</b>를 내려받습니다.</li>
-            <li><a href="https://climatecommunication.yale.edu/visualizations-data/sassy/" target="_blank" rel="noopener">Yale SASSY 페이지</a>의 그룹 툴(Group)에 올리고 결과 CSV를 받습니다.</li>
-            <li>아래 버튼으로 결과 CSV를 불러옵니다. (이 브라우저에만 저장됩니다)</li>
-          </ol>
-          <div class="row">
-            <label class="btn primary">결과 CSV 불러오기<input type="file" id="seg-file" accept=".csv,text/csv" hidden></label>
-            <button id="seg-demo" class="hidden">데모 분류 불러오기</button>
-          </div>
-          <p id="seg-err" class="err"></p>
-        </div>
-        <button id="seg-clear" class="hidden small" style="margin-top:10px">불러온 분류 지우기</button>
-      </div>
-    </section>
-
-    <section id="kei">
-      <h2 style="margin-top:28px">③ 한국 국민과 같은 질문 — KEI 국민환경의식조사 2023</h2>
-      <div class="card"><h3>“기후변화는 나에게 중요한 문제다”</h3><p class="sub">5점 척도 묶음: ④+⑤ / ③ / ①+②</p><div id="c-imp"></div></div>
-      <div class="card"><h3>기후변화로 피해를 받을 대상</h3><p class="sub">‘어느 정도 + 매우 많이 받는다’ 비율 · 가까운 대상 → 먼 대상 순</p><div id="c-harm"></div></div>
-      <div class="card"><h3>기후변화를 생각할 때 드는 감정</h3><p class="sub">3개 선택 · 고른 사람의 비율</p><div id="c-emo"></div></div>
-      <div class="card"><h3>‘기후변화’ 하면 떠오르는 것</h3><p class="sub">3개 선택 · 고른 사람의 비율</p><div id="c-img"></div></div>
-      <div class="card"><h3>미디어는 환경문제의 심각성을…</h3><p class="sub">응답 분포</p><div id="c-media"></div></div>
-      <div class="card"><h3>환경친화적 행동 vs 생활의 편리함</h3><p class="sub">5점 척도 묶음: ①+② / ③ / ④+⑤</p><div id="c-conv"></div></div>
-    </section>
-
-    <section id="src" class="card small ink2" style="margin-top:28px">
-      <h3 style="color:var(--ink)">출처와 해석 시 주의</h3>
-      <ul style="padding-left:1.2em;margin:.3em 0" id="src-list"></ul>
-    </section>
-  </div>
-</main>
+<body>
+<div id="state" class="state-screen"><div class="card ink2" id="state-card">불러오는 중…</div></div>
+<main id="deck" class="hidden"></main>
+<div class="deck-progress hidden" id="progress"></div>
+<nav class="deck-nav hidden" id="nav" aria-label="슬라이드 이동">
+  <button id="prev" title="이전 (←)">‹</button>
+  <span class="pos" id="pos"></span>
+  <button id="next" title="다음 (→, 스페이스)">›</button>
+  <button id="reload" class="hidden" title="새로고침">↻</button>
+  <button id="full" title="전체 화면 (F)">⛶</button>
+</nav>
 
 <script>
 (() => {
   const $ = id => document.getElementById(id);
   const { share, picked, fmt } = CS_STATS;
-  const { paired, tiles, esc, initTips } = CS_CHARTS;
+  const C = CS_CHARTS, esc = C.esc;
   const params = new URLSearchParams(location.search);
   const code = (params.get('s') || '').trim().toUpperCase();
   const MIN_N = (window.CS_CONFIG && CS_CONFIG.MIN_N) || 5;
   const adminKey = (() => { try { return sessionStorage.getItem('cs_admin_key'); } catch { return null; } })();
   const segKey = 'cs_seg_' + code;
-  let answers = [];
-  initTips();
+  let answers = [], info = {};
+  C.initTips();
 
-  const OURS = { key: 'ours', name: '우리 반', cls: 'c-ours' };
-  const KEI = { key: 'kei', name: '한국 국민', cls: 'c-kei' };
-  const US = { key: 'us', name: '미국 국민', cls: 'c-us' };
+  const OURS = { name: '우리 반', cls: 'c-ours' };
+  const KEI = { name: '한국 국민', cls: 'c-kei' };
+  const US = { name: '미국 국민', cls: 'c-us' };
 
+  // 응답 수준(서열)은 기후 줄무늬의 빨강 계열, 양극 척도는 파랑↔빨강/초록↔갈색 (가운데 회색)
+  const HEAT5 = ['#67000d', '#cb181d', '#fb6a4a', '#fcbba1', '#fee0d2'];
+  const HEAT4 = ['#a50f15', '#ef3b2c', '#fc9272', '#fee0d2'];
+  const DK = '#c3c2b7', MID = '#e1e0d9';
+  const SEG_COLORS = ['#b2182b', '#ef8a62', '#fddbc7', MID, '#92c5de', '#2166ac'];
+  const ink = hex => {
+    const n = parseInt(hex.slice(1), 16), ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+      .map(v => (v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2] < 0.3 ? '#ffffff' : '#0b0b0b';
+  };
+  const cats = (labels, colors) => labels.map((label, i) => ({ label, color: colors[i], ink: ink(colors[i]) }));
+
+  // ---------- 상태 화면 ----------
   function setState(html) {
-    $('state').innerHTML = html;
-    delete $('state').dataset.waiting;
+    $('state-card').innerHTML = html;
+    delete $('state-card').dataset.waiting;
     $('state').classList.remove('hidden');
-    $('dash').classList.add('hidden');
+    ['deck', 'nav', 'progress'].forEach(id => $(id).classList.add('hidden'));
   }
 
   async function load() {
@@ -117,12 +68,12 @@
       data = await CS_API.results(code, adminKey);
     } catch (e) {
       if (e.code === 'ADMIN_KEY_INVALID') {
-        if (!$('state').dataset.waiting) {
-          setState(`아직 설문이 진행 중입니다. 종료되면 이 화면에 결과가 자동으로 나타납니다.
+        if (!$('state-card').dataset.waiting) {
+          setState(`<h2>설문 진행 중</h2><p>설문이 종료되면 이 화면에 결과가 자동으로 나타납니다.</p>
             <details class="small" style="margin-top:12px"><summary>교수자 미리보기</summary>
             <div class="row" style="margin-top:8px"><input type="password" id="pv-key" placeholder="관리자 비밀번호" style="max-width:240px">
             <button id="pv-go">보기</button></div></details>`);
-          $('state').dataset.waiting = '1';
+          $('state-card').dataset.waiting = '1';
           $('pv-go').onclick = () => { try { sessionStorage.setItem('cs_admin_key', $('pv-key').value); } catch {} location.reload(); };
         }
         return setTimeout(load, 5000);
@@ -130,149 +81,325 @@
       return setState(esc(e.message));
     }
     answers = data.answers || [];
-    const preview = data.status !== 'closed';
-    $('meta').textContent = `${data.title ? data.title + ' · ' : ''}응답 ${answers.length}명` +
-      (preview ? ' · 관리자 미리보기(설문 진행 중)' : '') + (CS_API.DEMO ? ' · 데모 데이터' : '');
-    $('reload').classList.toggle('hidden', !preview);
+    info = data;
     if (answers.length < MIN_N) {
       setState(`응답이 ${MIN_N}명 미만이라 익명성 보호를 위해 결과를 표시하지 않습니다. (현재 ${answers.length}명)`);
       return setTimeout(load, 5000);
     }
     $('state').classList.add('hidden');
-    $('dash').classList.remove('hidden');
-    render();
+    ['deck', 'nav', 'progress'].forEach(id => $(id).classList.remove('hidden'));
+    $('reload').classList.toggle('hidden', data.status === 'closed');
+    build();
   }
-  $('reload').onclick = load;
+  $('reload').onclick = () => { const i = current; load().then(() => go(i, false)); };
 
+  // ---------- 집계 도우미 ----------
   const ours = (id, vals) => share(answers, id, vals);
-  const signed = x => (x >= 0 ? '+' : '−') + fmt(Math.abs(x), 1);
+  function dist(id, values) {
+    let n = 0; const counts = values.map(() => 0);
+    for (const a of answers) {
+      const v = a[id];
+      if (v === undefined || v === null) continue;
+      n++;
+      const i = values.indexOf(v);
+      if (i >= 0) counts[i]++;
+    }
+    return { counts, n, parts: counts.map(c => (n ? (c / n) * 100 : 0)) };
+  }
+  const groupDist = (id, groups) => {
+    const d = dist(id, groups.flatMap(g => g[0]));
+    let i = 0;
+    const counts = groups.map(g => g[0].reduce(s => s + d.counts[i++], 0));
+    return { counts, n: d.n, parts: counts.map(c => (d.n ? (c / d.n) * 100 : 0)) };
+  };
+  const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+  const add = (body, ...nodes) => { nodes.forEach(n => body.appendChild(n)); return nodes; };
 
-  function render() {
+  // ---------- 슬라이드 정의 ----------
+  function slides() {
     const K = CS.KEI;
+    const list = [];
     const comps = []; // 차이 큰 항목 계산용
-    const add = (label, o, bench, who) => comps.push({ label, o: o.pct, b: bench, who });
+    const comp = (label, sub, o, bench, who) => comps.push({ label, sub, o: o.pct, b: bench, who });
 
-    // ① SASSY vs 미국
-    const sassyRows = CS.SASSY.map(q => {
+    // 미국과 같은 문항 (SASSY)
+    CS.SASSY.forEach((q, i) => {
       const o = ours(q.id, q.top);
-      add(q.chartLabel + ' (Yale 문항)', o, q.us, '미국 국민');
-      return { label: q.chartLabel, values: { ours: o, us: { pct: q.us } } };
-    });
-    paired($('c-sassy'), {
-      series: [OURS, US], rows: sassyRows,
-      note: `미국: ${CS.SOURCES.us.detail}. 학생 문항은 한국어 번역본입니다. ‘모르겠다’ 응답도 분모에 포함됩니다.`,
+      comp(q.chartLabel, `Q${i + 1} · Yale 문항`, o, q.us, US.name);
+      list.push({
+        qn: `Q${i + 1}`, kicker: '미국 국민과 같은 질문 · Yale SASSY', title: q.text,
+        foot: `미국: ${CS.SOURCES.us.detail}. 학생 문항은 한국어 번역본이며 ‘모르겠다’도 분모에 포함됩니다.`,
+        render(body) {
+          const [a, b] = add(body, el('div'), el('div'));
+          C.vs(a, { label: `‘${q.chartLabel}’ 응답 비율`, left: { ...OURS, ...o }, right: { ...US, pct: q.us, note: '2025년 11월 조사' } });
+          const d = dist(q.id, q.options.map(x => x[0]));
+          const colors = q.options.length === 4 ? HEAT4 : q.options.some(x => x[0] === 0) ? [...HEAT4, DK] : HEAT5;
+          const rows = [{ ...OURS, ...d }];
+          if (q.usDist) rows.push({ ...US, parts: q.usDist });
+          C.stack(b, { cats: cats(q.options.map(x => x[1]), colors), rows, note: q.usDist ? '' : '미국은 전체 분포가 공개되지 않아 위의 상위 응답 비율만 비교합니다.' });
+        },
+      });
     });
 
-    // ③ KEI
-    const groupRows = (q, id) => q.groups.map(([vals, label, bench]) => {
-      const o = ours(id, vals);
-      return { label, values: { ours: o, kei: { pct: bench } }, o, bench };
+    // 6개 유형
+    list.push({
+      qn: 'Q1–4', kicker: 'Yale SASSY 4문항 종합', title: '‘기후 여론의 6개 유형’(Global Warming’s Six Americas) 분포',
+      foot: `미국: ${CS.SOURCES.usSeg.detail}. 분류: Yale SASSY 그룹 툴. 한국어 번역본 결과는 탐색적으로 해석하세요.`,
+      render: renderSegments,
     });
-    const impRows = groupRows(K.important, K.important.id);
-    add('기후변화는 나에게 중요하다 (KEI 문항)', impRows[0].o, impRows[0].bench, '한국 국민');
-    paired($('c-imp'), { series: [OURS, KEI], rows: impRows, note: '“중요하지 않다”가 매우 적어 막대가 짧게 보일 수 있습니다.' });
+
+    // 한국과 같은 문항 (KEI)
+    const keiFoot = `한국: ${CS.SOURCES.kei.detail} (발표자료 수치).`;
+    {
+      const g = K.important.groups;
+      const d = groupDist(K.important.id, g);
+      const o = { pct: d.parts[0], k: d.counts[0], n: d.n };
+      comp('기후변화는 나에게 중요하다', 'Q5 · KEI 문항', o, g[0][2], KEI.name);
+      list.push({
+        qn: 'Q5', kicker: '한국 국민과 같은 질문 · KEI 2023', title: K.important.text, foot: keiFoot,
+        render(body) {
+          const [a, b] = add(body, el('div'), el('div'));
+          C.vs(a, { label: '‘그렇다(④+⑤)’ 응답 비율', left: { ...OURS, ...o }, right: { ...KEI, pct: g[0][2], note: '2023년 조사' } });
+          C.stack(b, { cats: cats(g.map(x => x[1]), ['#b2182b', MID, '#2166ac']), rows: [{ ...OURS, ...d }, { ...KEI, parts: g.map(x => x[2]) }] });
+        },
+      });
+    }
 
     const harmRows = K.harm.targets.map(([id, label, bench]) => {
       const o = ours(id, K.harm.top);
-      add(`피해 대상: ${label}`, o, bench, '한국 국민');
-      return { label, values: { ours: o, kei: { pct: bench } } };
+      comp(`피해 대상: ${label}`, 'Q6 · KEI 문항', o, bench, KEI.name);
+      return { label, a: o, b: { pct: bench } };
     });
-    paired($('c-harm'), { series: [OURS, KEI], rows: harmRows });
-
-    const pickRows = q => q.options.map(([v, label, desc, bench]) => {
-      const o = picked(answers, q.id, v);
-      add(`${q === K.emotions ? '감정' : '떠오르는 것'}: ${label}`, o, bench, '한국 국민');
-      return { label, sub: desc, values: { ours: o, kei: { pct: bench } } };
-    });
-    paired($('c-emo'), { series: [OURS, KEI], rows: pickRows(K.emotions) });
-    paired($('c-img'), { series: [OURS, KEI], rows: pickRows(K.images), note: 'KEI 조사의 ‘위 보기 중에 없다’(0.5%)는 학생 설문에서 뺐습니다.' });
-
-    const mediaRows = K.media.options.map(([v, label, bench]) => {
-      const o = ours(K.media.id, [v]);
-      add(`미디어는 심각성을 ${label.replace('한다', '')}`, o, bench, '한국 국민');
-      return { label, values: { ours: o, kei: { pct: bench } } };
-    });
-    const mo = ours(K.media.id, [1, 2]).pct, mu = ours(K.media.id, [4, 5]).pct;
-    paired($('c-media'), {
-      series: [OURS, KEI], rows: mediaRows,
-      note: `과장한다(①+②): 우리 반 ${fmt(mo)}% · 국민 27.0%   |   축소한다(④+⑤): 우리 반 ${fmt(mu)}% · 국민 25.7%`,
+    list.push({
+      qn: 'Q6', kicker: '한국 국민과 같은 질문 · KEI 2023', title: K.harm.text, foot: keiFoot + ' ‘어느 정도+매우 많이 받는다’ 비율. 가까운 대상 → 먼 대상 순.',
+      render(body) {
+        const gap = harmRows[6].a.pct - harmRows[0].a.pct;
+        C.dumbbell(add(body, el('div'))[0], {
+          a: OURS, b: KEI, rows: harmRows,
+          note: `심리적 거리(‘미래 세대’ − ‘나 자신’): 우리 반 <b>${C.dlt(gap)}%p</b> · 한국 국민 <b>+15.8%p</b> (91.1 − 75.3)`,
+        });
+      },
     });
 
-    const convRows = groupRows(K.convenience, K.convenience.id);
-    convRows.forEach(r => add(`환경 vs 편리: ${r.label}`, r.o, r.bench, '한국 국민'));
-    paired($('c-conv'), { series: [OURS, KEI], rows: convRows });
+    const pickSlide = (q, qn, what) => {
+      const rows = q.options.map(([v, label, desc, bench]) => {
+        const o = picked(answers, q.id, v);
+        comp(`${what}: ${label}`, `${qn} · KEI 문항`, o, bench, KEI.name);
+        return { label, sub: desc, a: o, b: { pct: bench } };
+      });
+      return {
+        qn, kicker: '한국 국민과 같은 질문 · KEI 2023', title: q.text, foot: keiFoot + ' 3개 선택 문항: 그 보기를 고른 사람의 비율.',
+        render(body) { C.dumbbell(add(body, el('div'))[0], { a: OURS, b: KEI, rows }); },
+      };
+    };
+    list.push(pickSlide(K.emotions, 'Q7', '감정'));
+    list.push(pickSlide(K.images, 'Q8', '떠오르는 것'));
 
-    // 요약: 심리적 거리
-    const kGap = ours('harm_future', K.harm.top).pct - ours('harm_self', K.harm.top).pct;
-    const sGap = ours('future', [4, 3]).pct - ours('personal', [4, 3]).pct;
-    tiles($('tiles'), [
-      { label: '우리 반 · 한국(KEI) 문항 기준', value: signed(kGap), unit: '%p', cls: 'c-ours',
-        vs: `<span class="c-kei"><span class="who"></span></span>한국 국민 +15.8%p (미래 세대 91.1% − 나 자신 75.3%)` },
-      { label: '우리 반 · 미국(Yale) 문항 기준', value: signed(sGap), unit: '%p', cls: 'c-ours',
-        vs: `<span class="c-us"><span class="who"></span></span>미국 국민 +24%p (미래 세대 68% − 나 44%)` },
-    ]);
+    {
+      const opts = K.media.options;
+      const d = dist(K.media.id, opts.map(x => x[0]));
+      const over = ours(K.media.id, [1, 2]), under = ours(K.media.id, [4, 5]), same = ours(K.media.id, [3]);
+      comp('미디어가 심각성을 과장한다', 'Q9 · KEI 문항', over, 27.0, KEI.name);
+      comp('미디어가 심각성을 축소한다', 'Q9 · KEI 문항', under, 25.7, KEI.name);
+      list.push({
+        qn: 'Q9', kicker: '한국 국민과 같은 질문 · KEI 2023', title: K.media.text, foot: keiFoot,
+        render(body) {
+          const [a, b] = add(body, el('div'), el('div'));
+          C.stack(a, {
+            cats: cats(opts.map(x => x[1]), ['#2166ac', '#92c5de', MID, '#f4a582', '#b2182b']),
+            rows: [{ ...OURS, ...d }, { ...KEI, parts: opts.map(x => x[2]) }],
+          });
+          C.dumbbell(b, {
+            a: OURS, b: KEI, rows: [
+              { label: '과장한다 (①+②)', a: over, b: { pct: 27.0 } },
+              { label: '그대로 보여준다 (③)', a: same, b: { pct: 47.3 } },
+              { label: '축소한다 (④+⑤)', a: under, b: { pct: 25.7 } },
+            ],
+          });
+        },
+      });
+    }
 
-    // 요약: 차이 큰 항목 Top 5
-    comps.sort((a, b) => Math.abs(b.o - b.b) - Math.abs(a.o - a.b));
-    $('gaps').innerHTML = comps.slice(0, 5).map(c => {
-      const d = c.o - c.b;
-      return `<li>${esc(c.label)} — 우리 반 <b>${fmt(c.o)}%</b> · ${esc(c.who)} <b>${fmt(c.b)}%</b>
-        <span class="ink2">(${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}%p)</span></li>`;
-    }).join('');
+    {
+      const g = K.convenience.groups;
+      const d = groupDist(K.convenience.id, g);
+      const o = { pct: d.parts[0], k: d.counts[0], n: d.n };
+      comp('환경친화적 행동이 우선', 'Q10 · KEI 문항', o, g[0][2], KEI.name);
+      comp('생활의 편리함이 우선', 'Q10 · KEI 문항', { pct: d.parts[2] }, g[2][2], KEI.name);
+      list.push({
+        qn: 'Q10', kicker: '한국 국민과 같은 질문 · KEI 2023', title: K.convenience.text, foot: keiFoot,
+        render(body) {
+          const [a, b] = add(body, el('div'), el('div'));
+          C.vs(a, { label: '‘환경친화적 행동이 우선(①+②)’ 응답 비율', left: { ...OURS, ...o }, right: { ...KEI, pct: g[0][2], note: '2023년 조사' } });
+          C.stack(b, { cats: cats(g.map(x => x[1]), ['#1a9641', MID, '#a6611a']), rows: [{ ...OURS, ...d }, { ...KEI, parts: g.map(x => x[2]) }] });
+        },
+      });
+    }
 
-    renderSegments();
+    // 종합: 심리적 거리
+    list.push({
+      qn: '종합', kicker: 'Q3·Q4 · Q6', title: '심리적 거리 — 기후 피해를 ‘나’보다 ‘미래 세대’의 일로 느끼는 정도',
+      foot: '기울기가 가파를수록 피해를 먼 미래·남의 일로 느끼는 경향. 한국과 미국은 문항이 달라 각각 같은 문항끼리 비교합니다.',
+      render(body) {
+        const box = add(body, el('div', 'slopes'))[0];
+        const [a, b] = add(box, el('div'), el('div'));
+        const top = K.harm.top;
+        C.slope(a, {
+          title: 'KEI 문항 (피해를 받는다 ④+⑤)', left: '나 자신', right: '미래 세대',
+          lines: [{ ...OURS, a: ours('harm_self', top).pct, b: ours('harm_future', top).pct }, { ...KEI, a: 75.3, b: 91.1 }],
+        });
+        C.slope(b, {
+          title: 'Yale 문항 (피해가 있다: 매우 많이+어느 정도)', left: '나에게', right: '미래 세대에게',
+          lines: [{ ...OURS, a: ours('personal', [4, 3]).pct, b: ours('future', [4, 3]).pct }, { ...US, a: 44, b: 68 }],
+        });
+      },
+    });
 
-    $('src-list').innerHTML = [
-      `우리 반: 이 수업 참여자 ${answers.length}명의 응답으로, 모집단을 대표하지 않습니다.`,
-      `한국 국민: ${CS.SOURCES.kei.detail} (가중치 적용 결과, 발표자료 수치). 문항 문구는 발표자료 기준으로 재구성했습니다.`,
-      `미국 국민(문항): ${CS.SOURCES.us.detail}.`,
-      `미국 국민(6개 유형): ${CS.SOURCES.usSeg.detail}.`,
-      'Yale SASSY(Chryst et al., 2018)는 미국 영어로 검증된 도구입니다. 한국어 번역본의 결과는 탐색적으로 해석하세요.',
-      '한국·미국 조사는 문구와 척도가 달라, 서로 다른 조사 사이의 비교는 경향을 보는 수준으로만 해석하세요.',
-    ].map(t => `<li>${esc(t)}</li>`).join('');
+    // 종합: 차이 Top 5
+    list.push({
+      qn: '종합', kicker: '모든 문항', title: '비교 집단과 가장 크게 달랐던 응답 Top 5',
+      foot: '같은 문항끼리의 차이(%p)를 큰 순서로 정렬. 토론의 출발점으로 활용하세요.',
+      render(body) {
+        const top = comps.slice().sort((p, q) => Math.abs(q.o - q.b) - Math.abs(p.o - p.b)).slice(0, 5);
+        const cls = who => (who === US.name ? US.cls : KEI.cls);
+        body.appendChild(el('div', 'legend', `<span class="c-ours"><span class="key dot"></span>우리 반</span>
+          <span class="c-kei"><span class="key dot"></span>한국 국민</span><span class="c-us"><span class="key dot"></span>미국 국민</span>`));
+        body.appendChild(el('div', 'gapcards', top.map((c, i) => {
+          const lo = Math.min(c.o, c.b), hi = Math.max(c.o, c.b);
+          return `<div class="gapcard"><div class="rank">${i + 1}</div>
+            <div class="what">${esc(c.label)}<small>${esc(c.sub)} · 우리 반 ${fmt(c.o)}% · ${esc(c.who)} ${fmt(c.b)}%</small></div>
+            <div class="dtrack"><div class="dline" style="left:${lo}%;width:${hi - lo}%"></div>
+              <span class="ddot ${cls(c.who)}" style="left:${c.b}%"></span><span class="ddot c-ours" style="left:${c.o}%"></span></div>
+            <div class="gd">${C.dlt(c.o - c.b)}<small>%p</small></div></div>`;
+        }).join('')));
+      },
+    });
+
+    // 출처
+    list.push({
+      qn: 'i', kicker: '출처와 해석 시 주의', title: '이 결과를 읽을 때',
+      foot: '기후 줄무늬: 1880–2025 지구 평균기온(1971–2000 대비), NASA GISTEMP v4 · 시각화 방식 Ed Hawkins(showyourstripes.info, CC BY 4.0).',
+      render(body) {
+        body.appendChild(el('ul', 'src-list', [
+          `우리 반: 이 수업 참여자 ${answers.length}명의 응답으로, 모집단을 대표하지 않습니다.`,
+          `한국 국민: ${CS.SOURCES.kei.detail}. 가중치 적용 결과(발표자료 수치)이며, 문항 문구는 발표자료를 바탕으로 재구성했습니다.`,
+          `미국 국민(문항): ${CS.SOURCES.us.detail}.`,
+          `미국 국민(6개 유형): ${CS.SOURCES.usSeg.detail}.`,
+          'Yale SASSY(Chryst et al., 2018)는 미국 영어로 검증된 도구입니다. 한국어 번역본 결과는 탐색적으로 해석하세요.',
+          '한국·미국 조사는 문구와 척도가 달라, 각 비교는 같은 문항끼리만 묶었습니다. 서로 다른 조사 사이의 비교는 경향 수준으로 보세요.',
+        ].map(t => `<li>${esc(t)}</li>`).join('')));
+      },
+    });
+    return list;
   }
 
-  // ② 6개 유형
+  // ② 6개 유형 (Yale 툴 결과 CSV를 불러와야 표시)
   const SEG_DESC = {
-    Alarmed: '확신하고 매우 걱정하며 행동을 지지',
-    Concerned: '심각하다고 보지만 먼 일로 느낌',
-    Cautious: '아직 확신하지 못하고 덜 걱정',
-    Disengaged: '거의 들어보지 못해 잘 모름',
-    Doubtful: '일어나는지·인간 탓인지 의심',
-    Dismissive: '일어나지 않는다고 보고 반대',
+    Alarmed: '확신하고 매우 걱정하며 행동을 지지', Concerned: '심각하다고 보지만 먼 일로 느낌',
+    Cautious: '아직 확신하지 못하고 덜 걱정', Disengaged: '거의 들어보지 못해 잘 모름',
+    Doubtful: '일어나는지·인간 탓인지 의심', Dismissive: '일어나지 않는다고 보고 반대',
   };
-  function renderSegments() {
+  function renderSegments(body) {
+    body.innerHTML = '';
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(segKey)); } catch {}
-    $('seg-demo').classList.toggle('hidden', !CS_API.DEMO);
-    $('seg-setup').classList.toggle('hidden', !!saved);
-    $('seg-clear').classList.toggle('hidden', !saved);
-    if (!saved) { $('c-seg').innerHTML = ''; return; }
-    const rows = CS.SEGMENTS.map(([en, ko, us]) => ({
-      label: `${ko} (${en})`, sub: SEG_DESC[en],
-      values: { ours: { pct: saved.n ? saved.counts[en] / saved.n * 100 : 0, k: saved.counts[en], n: saved.n }, us: { pct: us } },
-    }));
-    const ac = saved.n ? (saved.counts.Alarmed + saved.counts.Concerned) / saved.n * 100 : 0;
-    paired($('c-seg'), {
-      series: [OURS, US], rows,
-      note: `경각+우려(Alarmed+Concerned): 우리 반 ${fmt(ac)}% · 미국 53%. 분류된 인원 ${saved.n}명. 미국: ${CS.SOURCES.usSeg.detail}.`,
+    if (!saved) {
+      const box = add(body, el('div', 'card upload-box', `
+        <p>Yale의 공식 분류 방식은 공개되어 있지 않아, <b>Yale SASSY 그룹 툴</b>로 분류한 결과를 불러와야 표시됩니다.</p>
+        <ol class="small ink2" style="padding-left:1.2em">
+          <li>교수자 콘솔에서 <b>SASSY 분류용 CSV</b>를 내려받습니다.</li>
+          <li><a href="https://climatecommunication.yale.edu/visualizations-data/sassy/" target="_blank" rel="noopener">Yale SASSY 페이지</a>의 그룹 툴(Group)에 올리고 결과 CSV를 받습니다.</li>
+          <li>아래 버튼으로 결과 CSV를 불러옵니다. (이 브라우저에만 저장됩니다)</li>
+        </ol>
+        <div class="row">
+          <label class="btn primary">결과 CSV 불러오기<input type="file" accept=".csv,text/csv" hidden></label>
+          ${CS_API.DEMO ? '<button data-demo>데모 분류 불러오기</button>' : ''}
+        </div><p class="err"></p>`))[0];
+      const save = text => {
+        try { localStorage.setItem(segKey, JSON.stringify(CS_STATS.segmentCounts(text))); renderSegments(body); }
+        catch (e) { box.querySelector('.err').textContent = e.message; }
+      };
+      box.querySelector('input[type=file]').onchange = async e => { const f = e.target.files[0]; if (f) save(await f.text()); e.target.value = ''; };
+      const demo = box.querySelector('[data-demo]');
+      if (demo) demo.onclick = () => save(CS_STATS.demoSegmentsCsv(answers));
+      return;
+    }
+    const n = saved.n || 0, c = saved.counts;
+    const ac = n ? (c.Alarmed + c.Concerned) / n * 100 : 0;
+    const [a, b] = add(body, el('div'), el('div'));
+    C.vs(a, { compact: true, label: '‘경각(Alarmed) + 우려(Concerned)’ 비율', left: { ...OURS, pct: ac, k: c.Alarmed + c.Concerned, n }, right: { ...US, pct: 53, note: '2025년 5월 조사' } });
+    C.stack(b, {
+      cats: CS.SEGMENTS.map(([en, ko], i) => ({ label: `${ko} ${en}`, color: SEG_COLORS[i], ink: ink(SEG_COLORS[i]) })),
+      rows: [
+        { ...OURS, parts: CS.SEGMENTS.map(([en]) => (n ? c[en] / n * 100 : 0)), counts: CS.SEGMENTS.map(([en]) => c[en]), n },
+        { ...US, parts: CS.SEGMENTS.map(s => s[2]) },
+      ],
+      note: CS.SEGMENTS.map(([en, ko]) => `<b>${ko}</b> ${SEG_DESC[en]}`).join(' · '),
     });
+    const clear = add(body, el('button', 'small', '불러온 분류 지우기'))[0];
+    clear.style.alignSelf = 'flex-start';
+    clear.onclick = () => { try { localStorage.removeItem(segKey); } catch {} renderSegments(body); };
   }
-  function saveSegments(text) {
-    try {
-      const r = CS_STATS.segmentCounts(text);
-      localStorage.setItem(segKey, JSON.stringify(r));
-      $('seg-err').textContent = '';
-      renderSegments();
-    } catch (e) { $('seg-err').textContent = e.message; }
+
+  // ---------- 덱 만들기 ----------
+  let sections = [], current = 0;
+  function build() {
+    const deck = $('deck');
+    deck.innerHTML = '';
+    const title = info.title ? esc(info.title) + ' · ' : '';
+    const cover = el('section', 'slide cover', `
+      <div class="slide-head">
+        <div class="kicker">기후변화 인식 설문 결과${CS_API.DEMO ? ' · 데모 데이터' : ''}${info.status !== 'closed' ? ' · 관리자 미리보기' : ''}</div>
+        <h1>우리 반은 기후위기를<br>어떻게 느끼고 있을까?</h1>
+        <p class="meta">${title}응답 ${answers.length}명</p>
+        <div class="vsline"><span class="pill c-ours"><i></i>우리 반</span>vs<span class="pill c-kei"><i></i>한국 국민 · KEI 2023</span>vs<span class="pill c-us"><i></i>미국 국민 · Yale 2025</span></div>
+        <p class="hint">→ · 스페이스 · 리모컨으로 넘기기 &nbsp;|&nbsp; F 전체 화면</p>
+      </div>
+      <div class="cap"><span>1880</span><span>배경: 기후 줄무늬 — 한 줄이 1년, 파랑은 추운 해·빨강은 더운 해 (지구 평균기온, NASA GISTEMP v4)</span><span>2025</span></div>`);
+    deck.appendChild(cover);
+    for (const s of slides()) {
+      const sec = el('section', 'slide');
+      sec.appendChild(el('header', 'slide-head', `<div class="kicker"><span class="qn">${esc(s.qn)}</span>${esc(s.kicker)}</div><h2>${esc(s.title)}</h2>`));
+      const body = el('div', 'slide-body');
+      sec.appendChild(body);
+      if (s.foot) sec.appendChild(el('footer', 'slide-foot', esc(s.foot)));
+      deck.appendChild(sec);
+      s.render(body);
+    }
+    sections = [...deck.querySelectorAll('.slide')];
+    sections.forEach((s, i) => s.id = 's' + (i + 1));
+    const io = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { current = sections.indexOf(e.target); paint(); } });
+    }, { threshold: 0.55 });
+    sections.forEach(s => io.observe(s));
+    paint();
   }
-  $('seg-file').onchange = async e => {
-    const f = e.target.files[0];
-    if (f) saveSegments(await f.text());
-    e.target.value = '';
+  function paint() {
+    $('pos').textContent = `${current + 1} / ${sections.length}`;
+    $('progress').style.width = `${(current + 1) / sections.length * 100}%`;
+  }
+  function go(i, smooth = true) {
+    if (!sections.length) return;
+    current = Math.max(0, Math.min(sections.length - 1, i));
+    sections[current].scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+    paint();
+  }
+  $('prev').onclick = () => go(current - 1);
+  $('next').onclick = () => go(current + 1);
+  const toggleFull = () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
   };
-  $('seg-demo').onclick = () => saveSegments(CS_STATS.demoSegmentsCsv(answers));
-  $('seg-clear').onclick = () => { try { localStorage.removeItem(segKey); } catch {} renderSegments(); };
+  $('full').onclick = toggleFull;
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input, textarea, select, button') && e.key === ' ') return;
+    if (e.target.closest('input, textarea, select')) return;
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(current + 1); }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); go(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(sections.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') toggleFull();
+  });
 
   load();
 })();

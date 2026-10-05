@@ -41,6 +41,7 @@ CS.SASSY = [
       [1, '전혀 중요하지 않다', 'Not at all important'],
     ],
     top: [5, 4], chartLabel: '개인적으로 중요하다 (매우·꽤)', us: 31,
+    usDist: [12, 19, 29, 18, 22], // 미국 전체 분포 (보기 순서대로)
   },
   {
     id: 'worry',
