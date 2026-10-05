@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>교수자 콘솔 · 기후변화 인식 설문</title>
-<link rel="stylesheet" href="assets/app.css?v=10">
+<link rel="stylesheet" href="assets/app.css?v=11">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<script src="assets/config.js?v=10"></script>
-<script src="assets/items.js?v=10"></script>
-<script src="assets/stats.js?v=10"></script>
-<script src="assets/api.js?v=10"></script>
+<script src="assets/config.js?v=11"></script>
+<script src="assets/items.js?v=11"></script>
+<script src="assets/stats.js?v=11"></script>
+<script src="assets/api.js?v=11"></script>
 </head>
 <body class="stripes-bg">
 <main class="wrap wide">
@@ -59,6 +59,8 @@
         </div>
         <div class="row" style="margin-top:10px">
           <button id="b-roster">참여자 명단 CSV</button>
+          <button id="b-raw" title="통계분석용 익명 원자료: 응답자 1명 = 1행, 모든 문항">응답 원자료 CSV</button>
+          <button id="b-codebook" title="원자료 변수 이름과 값의 뜻">코드북</button>
           <button id="b-sassy">SASSY 분류용 CSV</button>
           <span class="grow"></span>
           <button class="danger" id="b-delete">세션 삭제</button>
@@ -260,6 +262,15 @@
       CS_STATS.download(`sassy_${cur.code}.csv`, CS_STATS.sassyCsv(data.answers));
     } catch (e) { $('cur-err').textContent = e.message; }
   };
+  $('b-raw').onclick = async () => {
+    try {
+      const data = await CS_API.results(cur.code, key);
+      if (!data.answers.length) { $('cur-err').textContent = '아직 응답이 없습니다.'; return; }
+      const date = CS_STATS.ymd(cur.created_at ? new Date(cur.created_at) : new Date());
+      CS_STATS.download(`원자료_${date}_${cur.code}.csv`, CS_STATS.rawCsv(data.answers, cur.code, date), true);
+    } catch (e) { $('cur-err').textContent = e.message; }
+  };
+  $('b-codebook').onclick = () => CS_STATS.download('코드북.csv', CS_STATS.codebookCsv(), true);
   $('b-delete').onclick = async () => {
     const typed = prompt(`세션 ${cur.code}의 명단과 응답이 모두 지워지며 되돌릴 수 없습니다.\n삭제하려면 코드(${cur.code})를 입력하세요.`);
     if ((typed || '').trim().toUpperCase() !== cur.code) return;

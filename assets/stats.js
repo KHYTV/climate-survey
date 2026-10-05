@@ -61,6 +61,59 @@ window.CS_STATS = (() => {
     return toCsv(rows);
   }
 
+  // 통계분석용 익명 원자료: 응답자 1명 = 1행. resp_no 는 SASSY CSV 의 casenumber 와 같은 순서.
+  // 단일선택은 숫자 코드, 3개 선택 문항은 보기별 0/1 더미 변수.
+  function rawColumns() {
+    const K = CS.KEI;
+    const v = id => [id, a => (a[id] ?? '')];
+    const pick = (q, prefix) => q.options.map(([val]) => [prefix + val,
+      a => (Array.isArray(a[q.id]) ? (a[q.id].includes(val) ? 1 : 0) : '')]);
+    return [
+      ...CS.SASSY.map(q => v(q.id)),
+      v(K.important.id),
+      ...K.harm.targets.map(t => v(t[0])),
+      ...pick(K.emotions, 'emo_'),
+      ...pick(K.images, 'img_'),
+      v(K.media.id),
+      v(K.convenience.id),
+    ];
+  }
+
+  // date: 설문일 'YYYYMMDD' → id = 20261006-001 형식 (이름·학번과 연결되지 않는 익명 ID)
+  function rawCsv(answers, session, date) {
+    const cols = rawColumns();
+    const rows = [['id', 'resp_no', 'session', ...cols.map(c => c[0])]];
+    answers.forEach((a, i) =>
+      rows.push([`${date}-${String(i + 1).padStart(3, '0')}`, i + 1, session, ...cols.map(c => c[1](a))]));
+    return toCsv(rows);
+  }
+
+  const ymd = d => {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+  };
+
+  function codebookCsv() {
+    const K = CS.KEI;
+    const vals = opts => opts.map(o => `${o[0]}=${o[1]}${o[2] && typeof o[2] === 'string' ? ` (${o[2]})` : ''}`).join('; ');
+    const rows = [['variable', 'question', 'type', 'values']];
+    rows.push(['id', '응답 ID = 설문일(세션 생성일, YYYYMMDD) + 응답 순번(001~). 이름·학번과 연결되지 않는 익명 ID', 'text', '예: 20261006-001']);
+    rows.push(['resp_no', '응답 순번. 같은 세션의 SASSY 분류용 CSV casenumber와 같은 번호', 'id', '']);
+    rows.push(['session', '세션(참여) 코드', 'text', '']);
+    CS.SASSY.forEach(q => rows.push([q.id, `[Yale SASSY] ${q.text}`, '단일선택',
+      vals(q.options) + (q.options.some(o => o[0] === 0) ? ' — 0(모르겠다)은 분석 시 결측 처리 검토' : '')]));
+    rows.push([K.important.id, `[KEI] ${K.important.text}`, '단일선택(5점)', vals(K.important.options)]);
+    K.harm.targets.forEach(([id, label]) =>
+      rows.push([id, `[KEI] ${K.harm.text} — ${label}`, '단일선택(5점)', vals(K.harm.options)]));
+    K.emotions.options.forEach(([v, label, desc]) =>
+      rows.push(['emo_' + v, `[KEI] ${K.emotions.text} — ${label}: ${desc}`, '0/1 (3개 선택)', '1=선택, 0=선택 안 함']));
+    K.images.options.forEach(([v, label, desc]) =>
+      rows.push(['img_' + v, `[KEI] ${K.images.text} — ${label}${desc ? ` (${desc})` : ''}`, '0/1 (3개 선택)', '1=선택, 0=선택 안 함']));
+    rows.push([K.media.id, `[KEI] ${K.media.text}`, '단일선택(5점)', K.media.options.map(o => `${o[0]}=${o[1]}`).join('; ')]);
+    rows.push([K.convenience.id, `[KEI] ${K.convenience.text}`, '단일선택(5점)', K.convenience.options.map(o => `${o[0]}=${o[1]}`).join('; ')]);
+    return toCsv(rows);
+  }
+
   // Yale 툴이 돌려준 CSV에서 6개 유형 열을 찾아 개수를 셈
   function segmentCounts(text) {
     const rows = parseCsv(text);
@@ -157,5 +210,5 @@ window.CS_STATS = (() => {
     return toCsv(rows);
   }
 
-  return { share, picked, fmt, toCsv, parseCsv, sassyCsv, segmentCounts, download, demoAnswers, demoSegmentsCsv };
+  return { share, picked, fmt, toCsv, parseCsv, sassyCsv, rawCsv, codebookCsv, ymd, segmentCounts, download, demoAnswers, demoSegmentsCsv };
 })();
