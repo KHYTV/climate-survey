@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>교수자 콘솔 · 기후변화 인식 설문</title>
-<link rel="stylesheet" href="assets/app.css?v=9">
+<link rel="stylesheet" href="assets/app.css?v=10">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<script src="assets/config.js?v=9"></script>
-<script src="assets/items.js?v=9"></script>
-<script src="assets/stats.js?v=9"></script>
-<script src="assets/api.js?v=9"></script>
+<script src="assets/config.js?v=10"></script>
+<script src="assets/items.js?v=10"></script>
+<script src="assets/stats.js?v=10"></script>
+<script src="assets/api.js?v=10"></script>
 </head>
 <body class="stripes-bg">
 <main class="wrap wide">
@@ -20,6 +20,7 @@
       <div>
         <h1>교수자 콘솔</h1>
         <p>기후변화 인식 설문 · 세션 관리</p>
+        <p id="conn" class="conn hidden"></p>
       </div>
       <button id="logout" class="hidden">로그아웃</button>
     </div>
@@ -142,6 +143,10 @@
       return;
     }
     ss.set('cs_admin_key', key);
+    $('conn').textContent = CS_API.DEMO
+      ? '● 데모 모드 — 가짜 데이터, 저장되지 않음'
+      : '● 실제 서버 연결됨 — 학생 응답이 저장됩니다';
+    $('conn').classList.remove('hidden');
     $('v-login').classList.add('hidden');
     $('v-main').classList.remove('hidden');
     $('logout').classList.remove('hidden');
