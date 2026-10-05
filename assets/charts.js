@@ -4,7 +4,7 @@ window.CS_CHARTS = (() => {
   const f0 = x => CS_STATS.fmt(x, 0);
   const f1 = x => CS_STATS.fmt(x, 1);
   const cnt = v => (v && v.n != null ? ` (${v.k}/${v.n}명)` : '');
-  const dlt = d => `${d >= 0 ? '+' : '−'}${f0(Math.abs(d))}`;
+  const dlt = d => (Math.round(Math.abs(d)) === 0 ? '0' : `${d > 0 ? '+' : '−'}${f0(Math.abs(d))}`);
 
   function deltaText(d, who) {
     if (Math.abs(d) < 1) return `${who}과 거의 같음`;
