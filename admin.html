@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>교수자 콘솔 · 기후변화 인식 설문</title>
+<link rel="stylesheet" href="assets/app.css?v=2">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="assets/config.js?v=2"></script>
+<script src="assets/items.js?v=2"></script>
+<script src="assets/stats.js?v=2"></script>
+<script src="assets/api.js?v=2"></script>
+</head>
+<body>
+<main class="wrap wide">
+  <div class="row" style="justify-content:space-between;margin-top:8px">
+    <h1 style="margin:0">교수자 콘솔</h1>
+    <button id="logout" class="hidden">로그아웃</button>
+  </div>
+  <p id="demo-note" class="ink2 hidden">데모 모드: 서버 없이 가짜 데이터로 동작합니다. 아무 비밀번호나 입력하세요.</p>
+
+  <section id="v-login" class="card" style="max-width:420px">
+    <label class="field"><span>관리자 비밀번호</span><input type="password" id="key" autocomplete="current-password"></label>
+    <button class="primary block" id="login">접속</button>
+    <p id="login-err" class="err" role="alert"></p>
+  </section>
+
+  <div id="v-main" class="hidden">
+    <section class="card" id="cur-card">
+      <p class="muted" id="cur-empty">아래 목록에서 세션을 선택하거나 새로 만드세요.</p>
+      <div id="cur" class="hidden">
+        <div class="qrbox">
+          <div class="qr" id="qr" title="크게 보기" style="cursor:zoom-in"></div>
+          <div>
+            <div class="ink2 small">참여 코드</div>
+            <div class="bigcode" id="cur-code"></div>
+            <div class="small"><a id="cur-url" target="_blank" rel="noopener"></a></div>
+            <div class="row" style="margin-top:12px;align-items:baseline">
+              <span class="count" id="cur-n">0</span><span class="ink2">명 응답</span>
+              <span class="badge" id="cur-status"></span>
+            </div>
+            <div class="ink2 small" id="cur-title"></div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:16px">
+          <button class="primary" id="b-close">설문 종료하기</button>
+          <button id="b-open" class="hidden">다시 열기</button>
+          <button id="b-results">결과 화면 열기 ↗</button>
+          <button id="b-full">QR 크게 띄우기</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button id="b-roster">참여자 명단 CSV</button>
+          <button id="b-sassy">SASSY 분류용 CSV</button>
+          <span class="grow"></span>
+          <button class="danger" id="b-delete">세션 삭제</button>
+        </div>
+        <p id="cur-err" class="err" role="alert"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>새 세션 만들기</h2>
+      <div class="row">
+        <label class="field grow" style="margin:0"><span>제목 (학생 화면에 표시)</span><input id="new-title" value="기후변화 인식 설문"></label>
+        <label class="field" style="margin:0;width:150px"><span>참여 코드</span><input id="new-code" maxlength="12" autocapitalize="characters"></label>
+        <button class="primary" id="b-create" style="align-self:flex-end">만들기</button>
+      </div>
+      <p class="small muted">리허설용 세션을 따로 만들어 테스트한 뒤 삭제하고, 수업용 세션을 새로 만드세요.</p>
+      <p id="create-err" class="err" role="alert"></p>
+    </section>
+
+    <section class="card">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">세션 목록</h2><button id="b-refresh">목록 새로고침</button></div>
+      <table class="list" style="margin-top:8px">
+        <thead><tr><th>코드</th><th>제목</th><th>상태</th><th>응답</th><th></th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </section>
+  </div>
+</main>
+
+<div class="fullqr hidden" id="fullqr" title="닫기">
+  <div style="font-size:clamp(18px,3vw,34px);font-weight:700">휴대폰 카메라로 QR을 찍어 참여하세요</div>
+  <div class="qr" id="qr-big"></div>
+  <div class="url" id="url-big"></div>
+  <div style="color:#52514e">참여 코드 <b id="code-big" style="font-size:1.4em;letter-spacing:.08em"></b> · 클릭하면 닫힙니다</div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const demoQ = CS_API.DEMO ? '&demo=1' : '';
+  const ss = {
+    get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { sessionStorage.setItem(k, v); } catch {} },
+    del(k) { try { sessionStorage.removeItem(k); } catch {} },
+  };
+  let key = ss.get('cs_admin_key');
+  let sessions = [];
+  let cur = null;
+  let pollTimer = null;
+
+  $('demo-note').classList.toggle('hidden', !CS_API.DEMO);
+
+  const randomCode = () => {
+    const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    return Array.from({ length: 5 }, () => A[Math.floor(Math.random() * A.length)]).join('');
+  };
+  $('new-code').value = randomCode();
+
+  const joinUrl = code => {
+    const base = new URL('./', location.href).href;
+    return `${base}?s=${encodeURIComponent(code)}${demoQ}`;
+  };
+  const qrSvg = text => {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true, alt: '참여 QR 코드' });
+  };
+
+  // ---------- 접속 ----------
+  async function login() {
+    $('login-err').textContent = '';
+    try {
+      sessions = await CS_API.adminList(key);
+    } catch (e) {
+      ss.del('cs_admin_key');
+      key = null;
+      $('v-login').classList.remove('hidden');
+      $('v-main').classList.add('hidden');
+      $('login-err').textContent = e.message;
+      return;
+    }
+    ss.set('cs_admin_key', key);
+    $('v-login').classList.add('hidden');
+    $('v-main').classList.remove('hidden');
+    $('logout').classList.remove('hidden');
+    renderList();
+    const last = ss.get('cs_admin_cur');
+    if (last && sessions.some(s => s.code === last)) select(last);
+  }
+  $('login').onclick = () => { key = $('key').value; if (key) login(); };
+  $('key').onkeydown = e => { if (e.key === 'Enter') $('login').click(); };
+  $('logout').onclick = () => { ss.del('cs_admin_key'); ss.del('cs_admin_cur'); location.reload(); };
+
+  // ---------- 목록 ----------
+  function renderList() {
+    $('list').innerHTML = sessions.length ? sessions.map(s => `
+      <tr class="${cur && cur.code === s.code ? 'sel' : ''}">
+        <td><b>${esc(s.code)}</b></td><td>${esc(s.title)}</td>
+        <td><span class="badge ${s.status}">${s.status === 'open' ? '진행 중' : '종료'}</span></td>
+        <td>${s.n}</td>
+        <td><button data-sel="${esc(s.code)}">선택</button></td>
+      </tr>`).join('') : '<tr><td colspan="5" class="muted">아직 세션이 없습니다.</td></tr>';
+  }
+  $('list').onclick = e => { const b = e.target.closest('[data-sel]'); if (b) select(b.dataset.sel); };
+  $('b-refresh').onclick = async () => { sessions = await CS_API.adminList(key).catch(() => sessions); renderList(); };
+
+  $('b-create').onclick = async () => {
+    $('create-err').textContent = '';
+    const code = $('new-code').value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{3,12}$/.test(code)) { $('create-err').textContent = '코드는 영문 대문자·숫자 3~12자로 정해 주세요.'; return; }
+    try {
+      await CS_API.adminCreate(key, code, $('new-title').value.trim());
+      sessions = await CS_API.adminList(key);
+      $('new-code').value = randomCode();
+      select(code);
+    } catch (e) { $('create-err').textContent = e.message; }
+  };
+
+  // ---------- 선택한 세션 ----------
+  function select(code) {
+    cur = sessions.find(s => s.code === code);
+    if (!cur) return;
+    ss.set('cs_admin_cur', code);
+    const url = joinUrl(code);
+    $('cur-empty').classList.add('hidden');
+    $('cur').classList.remove('hidden');
+    $('cur-code').textContent = code;
+    $('cur-url').textContent = url;
+    $('cur-url').href = url;
+    $('cur-title').textContent = cur.title;
+    $('qr').innerHTML = qrSvg(url);
+    $('cur-err').textContent = '';
+    paint(cur);
+    renderList();
+    clearTimeout(pollTimer);
+    poll();
+  }
+  function paint(info) {
+    $('cur-n').textContent = info.n;
+    const open = info.status === 'open';
+    $('cur-status').textContent = open ? '진행 중' : '종료';
+    $('cur-status').className = 'badge ' + info.status;
+    $('b-close').classList.toggle('hidden', !open);
+    $('b-open').classList.toggle('hidden', open);
+  }
+  async function poll() {
+    if (!cur) return;
+    const code = cur.code;
+    try {
+      const info = await CS_API.sessionInfo(code);
+      if (info && cur && cur.code === code) {
+        Object.assign(cur, info);
+        paint(cur);
+        const row = sessions.find(s => s.code === code);
+        if (row) Object.assign(row, info);
+      }
+    } catch {}
+    pollTimer = setTimeout(poll, 3000);
+  }
+
+  async function setStatus(status) {
+    $('cur-err').textContent = '';
+    try {
+      const info = await CS_API.adminSetStatus(key, cur.code, status);
+      Object.assign(cur, info);
+      paint(cur);
+      renderList();
+    } catch (e) { $('cur-err').textContent = e.message; }
+  }
+  $('b-close').onclick = () => {
+    if (confirm('설문을 종료할까요?\n종료하면 더 이상 제출할 수 없고, 결과가 학생들에게도 공개됩니다.')) setStatus('closed');
+  };
+  $('b-open').onclick = () => { if (confirm('설문을 다시 열까요? 결과는 다시 비공개가 됩니다.')) setStatus('open'); };
+
+  // 같은 탭 세션(sessionStorage)을 넘겨받도록 window.open 사용
+  $('b-results').onclick = () => window.open(`results.html?s=${encodeURIComponent(cur.code)}${demoQ}`, '_blank');
+
+  const stamp = iso => {
+    const d = new Date(iso), p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  };
+  $('b-roster').onclick = async () => {
+    try {
+      const list = await CS_API.adminRoster(key, cur.code);
+      const csv = CS_STATS.toCsv([['학번', '이름', '제출 시각'], ...list.map(r => [r.student_id, r.name, stamp(r.submitted_at)])]);
+      CS_STATS.download(`참여명단_${cur.code}.csv`, csv, true);
+    } catch (e) { $('cur-err').textContent = e.message; }
+  };
+  $('b-sassy').onclick = async () => {
+    try {
+      const data = await CS_API.results(cur.code, key);
+      if (!data.answers.length) { $('cur-err').textContent = '아직 응답이 없습니다.'; return; }
+      CS_STATS.download(`sassy_${cur.code}.csv`, CS_STATS.sassyCsv(data.answers));
+    } catch (e) { $('cur-err').textContent = e.message; }
+  };
+  $('b-delete').onclick = async () => {
+    const typed = prompt(`세션 ${cur.code}의 명단과 응답이 모두 지워지며 되돌릴 수 없습니다.\n삭제하려면 코드(${cur.code})를 입력하세요.`);
+    if ((typed || '').trim().toUpperCase() !== cur.code) return;
+    try {
+      await CS_API.adminDelete(key, cur.code);
+      ss.del('cs_admin_cur');
+      cur = null;
+      clearTimeout(pollTimer);
+      $('cur').classList.add('hidden');
+      $('cur-empty').classList.remove('hidden');
+      sessions = await CS_API.adminList(key);
+      renderList();
+    } catch (e) { $('cur-err').textContent = e.message; }
+  };
+
+  // ---------- QR 크게 ----------
+  const openFull = () => {
+    const url = joinUrl(cur.code);
+    $('qr-big').innerHTML = qrSvg(url);
+    $('url-big').textContent = url.replace(/^https?:\/\//, '');
+    $('code-big').textContent = cur.code;
+    $('fullqr').classList.remove('hidden');
+  };
+  $('b-full').onclick = openFull;
+  $('qr').onclick = openFull;
+  $('fullqr').onclick = () => $('fullqr').classList.add('hidden');
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('fullqr').classList.add('hidden'); });
+
+  if (key) login();
+})();
+</script>
+</body>
+</html>

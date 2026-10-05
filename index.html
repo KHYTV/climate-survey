@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>기후변화 인식 설문</title>
+<link rel="stylesheet" href="assets/app.css?v=2">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/config.js?v=2"></script>
+<script src="assets/items.js?v=2"></script>
+<script src="assets/stats.js?v=2"></script>
+<script src="assets/api.js?v=2"></script>
+</head>
+<body>
+<main class="wrap">
+  <header style="margin-top:8px">
+    <h1>기후변화 인식 설문</h1>
+    <p id="sess-title" class="ink2"></p>
+  </header>
+
+  <p id="loading" class="muted">불러오는 중…</p>
+
+  <section id="v-code" class="card hidden">
+    <label class="field"><span>참여 코드</span>
+      <input id="code-in" autocomplete="off" autocapitalize="characters" placeholder="화면의 코드를 입력하세요"></label>
+    <button class="primary block" id="code-go">입장</button>
+    <p id="code-err" class="err" role="alert"></p>
+  </section>
+
+  <section id="v-intro" class="card hidden">
+    <h2>시작하기 전에</h2>
+    <ul style="padding-left:1.2em;margin:.4em 0 1em">
+      <li>약 5분, 10문항입니다. 정답은 없으니 생각하는 그대로 답해 주세요.</li>
+      <li>이름과 학번은 <b>참여 점수 확인</b>에만 쓰입니다.</li>
+      <li>응답은 이름·학번과 <b>분리해서</b> 저장되며, 결과는 <b>전체 통계로만</b> 공개됩니다.</li>
+    </ul>
+    <label class="field"><span>학번</span><input id="sid" inputmode="numeric" autocomplete="off" maxlength="20"></label>
+    <label class="field"><span>이름</span><input id="name" autocomplete="name" maxlength="30"></label>
+    <button class="primary block" id="start">설문 시작</button>
+    <p id="intro-err" class="err" role="alert"></p>
+  </section>
+
+  <form id="v-form" class="hidden" novalidate>
+    <div class="progress">
+      <div class="track"><div class="fill" id="pfill"></div></div>
+      <div class="txt" id="ptxt"></div>
+    </div>
+    <div id="questions"></div>
+    <button class="primary block" type="submit" id="submit">제출하기</button>
+    <p id="form-err" class="err" role="alert"></p>
+    <p class="small muted" id="who"></p>
+  </form>
+
+  <section id="v-done" class="card hidden">
+    <h2>제출했습니다 ✓</h2>
+    <p>참여해 주셔서 감사합니다.</p>
+    <p id="done-status" class="ink2">설문이 끝나면 결과를 함께 봅니다. 이 화면을 열어 두세요.</p>
+    <a id="done-link" class="btn primary block hidden" href="#">결과 보기</a>
+  </section>
+
+  <section id="v-msg" class="card hidden">
+    <p id="msg"></p>
+    <a id="msg-link" class="btn primary hidden" href="#">결과 보기</a>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const VIEWS = ['v-code', 'v-intro', 'v-form', 'v-done', 'v-msg'];
+  const show = id => { $('loading').classList.add('hidden'); VIEWS.forEach(v => $(v).classList.toggle('hidden', v !== id)); };
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  const demoQ = CS_API.DEMO ? '&demo=1' : '';
+
+  let code = (new URLSearchParams(location.search).get('s') || '').trim().toUpperCase();
+  let ans = {};
+  let sid = '', name = '';
+  const draftKey = () => 'cs_draft_' + code;
+  const doneKey = () => 'cs_done_' + code;
+  const resultsUrl = () => `results.html?s=${encodeURIComponent(code)}${demoQ}`;
+
+  // ---------- 진입 ----------
+  async function enter() {
+    if (!code) { show('v-code'); $('code-in').focus(); return; }
+    let info;
+    try { info = await CS_API.sessionInfo(code); }
+    catch (e) { show('v-code'); $('code-err').textContent = e.message; return; }
+    if (!info) { show('v-code'); $('code-in').value = code; $('code-err').textContent = '참여 코드를 찾을 수 없습니다. 다시 확인해 주세요.'; return; }
+    $('sess-title').textContent = info.title || '';
+    if (store.get(doneKey())) return showDone();
+    if (info.status !== 'open') return showMsg('설문이 종료되었습니다.', true);
+    const d = store.get(draftKey());
+    if (d) { $('sid').value = d.sid || ''; $('name').value = d.name || ''; ans = d.ans || {}; }
+    show('v-intro');
+  }
+
+  $('code-go').onclick = () => {
+    code = $('code-in').value.trim().toUpperCase();
+    if (!code) return;
+    history.replaceState(null, '', `?s=${encodeURIComponent(code)}${demoQ}`);
+    $('code-err').textContent = '';
+    enter();
+  };
+  $('code-in').onkeydown = e => { if (e.key === 'Enter') $('code-go').click(); };
+
+  $('start').onclick = () => {
+    sid = $('sid').value.trim();
+    name = $('name').value.trim();
+    if (sid.length < 2 || !name) { $('intro-err').textContent = '학번과 이름을 입력해 주세요.'; return; }
+    $('intro-err').textContent = '';
+    saveDraft();
+    renderForm();
+    show('v-form');
+    $('who').textContent = `제출자: ${name} (${sid})`;
+    scrollTo(0, 0);
+  };
+
+  function saveDraft() { store.set(draftKey(), { sid, name, ans }); }
+
+  // ---------- 문항 그리기 ----------
+  let num = 0;
+  const card = (key, inner, qtext) =>
+    `<div class="card q" data-q="${key}"><div class="qtext"><span class="qnum">${++num}.</span>${qtext}</div>${inner}</div>`;
+
+  function single(id, text, options) {
+    const opts = options.map(([v, label]) =>
+      `<label class="opt"><input type="radio" name="${id}" value="${v}" ${ans[id] === v ? 'checked' : ''}><span>${esc(label)}</span></label>`).join('');
+    return card(id, `<div class="opts">${opts}</div>`, esc(text));
+  }
+
+  function matrix(h) {
+    const rows = h.targets.map(([id, label]) => {
+      const segs = h.options.map(([v], i) =>
+        `<label class="seg"><input type="radio" name="${id}" value="${v}" ${ans[id] === v ? 'checked' : ''} aria-label="${esc(label)}: ${esc(h.options[i][1])}"><span>${esc(h.short[i])}</span></label>`).join('');
+      return `<div class="target" data-t="${id}"><div class="tname">${esc(label)}</div><div class="segs">${segs}</div></div>`;
+    }).join('');
+    return card('harm', rows, esc(h.text) + '<div class="small muted" style="font-weight:400">피해를 받는 정도</div>');
+  }
+
+  function pickK(q) {
+    const sel = ans[q.id] || [];
+    const chips = q.options.map(([v, label, desc]) =>
+      `<label class="chip"><input type="checkbox" name="${q.id}" value="${v}" ${sel.includes(v) ? 'checked' : ''}>
+        <span><b>${esc(label)}</b>${desc ? `<span class="desc">${esc(desc)}</span>` : ''}</span></label>`).join('');
+    return card(q.id, `<p class="pickcount" id="cnt-${q.id}"></p><div class="opts">${chips}</div>`, esc(q.text));
+  }
+
+  function renderForm() {
+    num = 0;
+    const K = CS.KEI;
+    $('questions').innerHTML =
+      `<h2 class="part-title">A. 미국 예일대 기후 여론조사 문항</h2>
+       <p class="small muted">‘지구온난화’는 원문(global warming)을 그대로 옮긴 표현입니다.</p>` +
+      CS.SASSY.map(q => single(q.id, q.text, q.options)).join('') +
+      `<h2 class="part-title">B. 한국환경연구원 국민환경의식조사 문항</h2>` +
+      single(K.important.id, K.important.text, K.important.options) +
+      matrix(K.harm) +
+      pickK(K.emotions) +
+      pickK(K.images) +
+      single(K.media.id, K.media.text, K.media.options) +
+      single(K.convenience.id, K.convenience.text, K.convenience.options);
+    [K.emotions, K.images].forEach(updatePick);
+    updateProgress();
+  }
+
+  const PICKS = { [CS.KEI.emotions.id]: CS.KEI.emotions, [CS.KEI.images.id]: CS.KEI.images };
+
+  function updatePick(q) {
+    const sel = ans[q.id] || [];
+    $('cnt-' + q.id).textContent = `${sel.length} / ${q.pick}개 선택`;
+    document.querySelectorAll(`input[name="${q.id}"]`).forEach(inp => {
+      const lock = !inp.checked && sel.length >= q.pick;
+      inp.disabled = lock;
+      inp.closest('.chip').classList.toggle('disabled', lock);
+    });
+  }
+
+  $('questions').addEventListener('change', e => {
+    const inp = e.target;
+    if (inp.type === 'radio') {
+      ans[inp.name] = Number(inp.value);
+    } else if (inp.type === 'checkbox') {
+      const q = PICKS[inp.name];
+      const sel = new Set(ans[q.id] || []);
+      inp.checked ? sel.add(inp.value) : sel.delete(inp.value);
+      ans[q.id] = [...sel].slice(0, q.pick);
+      updatePick(q);
+    }
+    const q = inp.closest('.q');
+    if (q && q.classList.contains('missing') && isComplete(q.dataset.q)) q.classList.remove('missing');
+    const t = inp.closest('.target');
+    if (t) t.classList.remove('missing');
+    saveDraft();
+    updateProgress();
+  });
+
+  function answered(key) {
+    if (PICKS[key]) return (ans[key] || []).length === PICKS[key].pick;
+    return ans[key] !== undefined && ans[key] !== null;
+  }
+  function isComplete(qkey) {
+    if (qkey === 'harm') return CS.KEI.harm.targets.every(t => answered(t[0]));
+    return answered(qkey);
+  }
+  function updateProgress() {
+    const keys = CS.allKeys();
+    const done = keys.filter(answered).length;
+    $('pfill').style.width = (done / keys.length * 100) + '%';
+    $('ptxt').textContent = `${done} / ${keys.length} 응답`;
+  }
+
+  // ---------- 제출 ----------
+  $('v-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    let first = null;
+    document.querySelectorAll('.q').forEach(q => {
+      const ok = isComplete(q.dataset.q);
+      q.classList.toggle('missing', !ok);
+      if (!ok && !first) first = q;
+    });
+    document.querySelectorAll('.target').forEach(t => t.classList.toggle('missing', !answered(t.dataset.t)));
+    if (first) {
+      $('form-err').textContent = '빠진 문항이 있습니다. 빨간 테두리 문항을 확인해 주세요.';
+      first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    $('form-err').textContent = '';
+    $('submit').disabled = true;
+    $('submit').textContent = '제출 중…';
+    try {
+      await CS_API.submit(code, sid, name, { ...ans, v: 1 });
+      store.set(doneKey(), true);
+      store.del(draftKey());
+      showDone();
+    } catch (err) {
+      if (err.code === 'ALREADY_SUBMITTED') { store.set(doneKey(), true); store.del(draftKey()); return showMsg(err.message + ' 참여가 이미 기록되어 있습니다.', false); }
+      if (err.code === 'SESSION_CLOSED') return showMsg('설문이 종료되어 제출할 수 없습니다.', true);
+      $('form-err').textContent = err.message + ' 다시 눌러 주세요.';
+      $('submit').disabled = false;
+      $('submit').textContent = '제출하기';
+    }
+  });
+
+  // ---------- 완료 · 결과 대기 ----------
+  function showDone() {
+    show('v-done');
+    $('done-link').href = resultsUrl();
+    const poll = async () => {
+      try {
+        const info = await CS_API.sessionInfo(code);
+        if (info && info.status === 'closed') {
+          $('done-status').textContent = '설문이 종료되었습니다. 전체 결과를 볼 수 있어요.';
+          $('done-link').classList.remove('hidden');
+          return;
+        }
+      } catch {}
+      setTimeout(poll, 5000);
+    };
+    poll();
+  }
+
+  function showMsg(text, withLink) {
+    show('v-msg');
+    $('msg').textContent = text;
+    $('msg-link').href = resultsUrl();
+    $('msg-link').classList.toggle('hidden', !withLink);
+  }
+
+  enter();
+})();
+</script>
+</body>
+</html>

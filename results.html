@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>기후변화 인식 결과</title>
+<link rel="stylesheet" href="assets/app.css?v=2">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="assets/config.js?v=2"></script>
+<script src="assets/items.js?v=2"></script>
+<script src="assets/stats.js?v=2"></script>
+<script src="assets/api.js?v=2"></script>
+<script src="assets/charts.js?v=2"></script>
+</head>
+<body class="dash">
+<main class="wrap wide">
+  <div class="dash-head" style="margin-top:8px">
+    <div>
+      <h1>우리 반 기후변화 인식 — 한국·미국과 비교</h1>
+      <p id="meta" class="ink2" style="margin:0"></p>
+    </div>
+    <button id="reload" class="hidden">새로고침</button>
+  </div>
+
+  <p id="state" class="card ink2">불러오는 중…</p>
+
+  <div id="dash" class="hidden">
+    <nav>
+      <a href="#sum">요약</a><a href="#us">미국 비교</a><a href="#seg">6개 유형</a>
+      <a href="#kei">한국 비교</a><a href="#src">출처·주의</a>
+    </nav>
+
+    <section id="sum">
+      <div class="card">
+        <h3>심리적 거리 — ‘미래 세대’와 ‘나 자신’의 피해 인식 차이</h3>
+        <p class="sub">‘피해를 받을 것’이라는 응답 비율의 차이(%p). 클수록 기후 피해를 먼 미래·남의 일로 느끼는 경향.</p>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <div class="card">
+        <h3>가장 차이가 큰 항목</h3>
+        <p class="sub">우리 반과 비교 집단의 차이가 큰 순서 (토론 출발점)</p>
+        <ul class="gaps" id="gaps"></ul>
+      </div>
+    </section>
+
+    <section id="us">
+      <h2 style="margin-top:28px">① 미국 국민과 같은 질문 — Yale SASSY 4문항</h2>
+      <div class="card"><div id="c-sassy"></div></div>
+    </section>
+
+    <section id="seg">
+      <h2 style="margin-top:28px">② ‘기후 여론의 6개 유형’ (Global Warming’s Six Americas)</h2>
+      <div class="card" id="seg-card">
+        <div id="c-seg"></div>
+        <div id="seg-setup">
+          <p>Yale의 공식 분류 방식은 공개되어 있지 않아, <b>Yale SASSY 그룹 툴</b>로 분류한 결과를 불러와야 표시됩니다.</p>
+          <ol class="small ink2" style="padding-left:1.2em">
+            <li>교수자 콘솔에서 <b>SASSY 분류용 CSV</b>를 내려받습니다.</li>
+            <li><a href="https://climatecommunication.yale.edu/visualizations-data/sassy/" target="_blank" rel="noopener">Yale SASSY 페이지</a>의 그룹 툴(Group)에 올리고 결과 CSV를 받습니다.</li>
+            <li>아래 버튼으로 결과 CSV를 불러옵니다. (이 브라우저에만 저장됩니다)</li>
+          </ol>
+          <div class="row">
+            <label class="btn primary">결과 CSV 불러오기<input type="file" id="seg-file" accept=".csv,text/csv" hidden></label>
+            <button id="seg-demo" class="hidden">데모 분류 불러오기</button>
+          </div>
+          <p id="seg-err" class="err"></p>
+        </div>
+        <button id="seg-clear" class="hidden small" style="margin-top:10px">불러온 분류 지우기</button>
+      </div>
+    </section>
+
+    <section id="kei">
+      <h2 style="margin-top:28px">③ 한국 국민과 같은 질문 — KEI 국민환경의식조사 2023</h2>
+      <div class="card"><h3>“기후변화는 나에게 중요한 문제다”</h3><p class="sub">5점 척도 묶음: ④+⑤ / ③ / ①+②</p><div id="c-imp"></div></div>
+      <div class="card"><h3>기후변화로 피해를 받을 대상</h3><p class="sub">‘어느 정도 + 매우 많이 받는다’ 비율 · 가까운 대상 → 먼 대상 순</p><div id="c-harm"></div></div>
+      <div class="card"><h3>기후변화를 생각할 때 드는 감정</h3><p class="sub">3개 선택 · 고른 사람의 비율</p><div id="c-emo"></div></div>
+      <div class="card"><h3>‘기후변화’ 하면 떠오르는 것</h3><p class="sub">3개 선택 · 고른 사람의 비율</p><div id="c-img"></div></div>
+      <div class="card"><h3>미디어는 환경문제의 심각성을…</h3><p class="sub">응답 분포</p><div id="c-media"></div></div>
+      <div class="card"><h3>환경친화적 행동 vs 생활의 편리함</h3><p class="sub">5점 척도 묶음: ①+② / ③ / ④+⑤</p><div id="c-conv"></div></div>
+    </section>
+
+    <section id="src" class="card small ink2" style="margin-top:28px">
+      <h3 style="color:var(--ink)">출처와 해석 시 주의</h3>
+      <ul style="padding-left:1.2em;margin:.3em 0" id="src-list"></ul>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const { share, picked, fmt } = CS_STATS;
+  const { paired, tiles, esc, initTips } = CS_CHARTS;
+  const params = new URLSearchParams(location.search);
+  const code = (params.get('s') || '').trim().toUpperCase();
+  const MIN_N = (window.CS_CONFIG && CS_CONFIG.MIN_N) || 5;
+  const adminKey = (() => { try { return sessionStorage.getItem('cs_admin_key'); } catch { return null; } })();
+  const segKey = 'cs_seg_' + code;
+  let answers = [];
+  initTips();
+
+  const OURS = { key: 'ours', name: '우리 반', cls: 'c-ours' };
+  const KEI = { key: 'kei', name: '한국 국민', cls: 'c-kei' };
+  const US = { key: 'us', name: '미국 국민', cls: 'c-us' };
+
+  function setState(html) {
+    $('state').innerHTML = html;
+    delete $('state').dataset.waiting;
+    $('state').classList.remove('hidden');
+    $('dash').classList.add('hidden');
+  }
+
+  async function load() {
+    if (!code) return setState('주소에 참여 코드가 없습니다. (예: results.html?s=코드)');
+    let data;
+    try {
+      data = await CS_API.results(code, adminKey);
+    } catch (e) {
+      if (e.code === 'ADMIN_KEY_INVALID') {
+        if (!$('state').dataset.waiting) {
+          setState(`아직 설문이 진행 중입니다. 종료되면 이 화면에 결과가 자동으로 나타납니다.
+            <details class="small" style="margin-top:12px"><summary>교수자 미리보기</summary>
+            <div class="row" style="margin-top:8px"><input type="password" id="pv-key" placeholder="관리자 비밀번호" style="max-width:240px">
+            <button id="pv-go">보기</button></div></details>`);
+          $('state').dataset.waiting = '1';
+          $('pv-go').onclick = () => { try { sessionStorage.setItem('cs_admin_key', $('pv-key').value); } catch {} location.reload(); };
+        }
+        return setTimeout(load, 5000);
+      }
+      return setState(esc(e.message));
+    }
+    answers = data.answers || [];
+    const preview = data.status !== 'closed';
+    $('meta').textContent = `${data.title ? data.title + ' · ' : ''}응답 ${answers.length}명` +
+      (preview ? ' · 관리자 미리보기(설문 진행 중)' : '') + (CS_API.DEMO ? ' · 데모 데이터' : '');
+    $('reload').classList.toggle('hidden', !preview);
+    if (answers.length < MIN_N) {
+      setState(`응답이 ${MIN_N}명 미만이라 익명성 보호를 위해 결과를 표시하지 않습니다. (현재 ${answers.length}명)`);
+      return setTimeout(load, 5000);
+    }
+    $('state').classList.add('hidden');
+    $('dash').classList.remove('hidden');
+    render();
+  }
+  $('reload').onclick = load;
+
+  const ours = (id, vals) => share(answers, id, vals);
+  const signed = x => (x >= 0 ? '+' : '−') + fmt(Math.abs(x), 1);
+
+  function render() {
+    const K = CS.KEI;
+    const comps = []; // 차이 큰 항목 계산용
+    const add = (label, o, bench, who) => comps.push({ label, o: o.pct, b: bench, who });
+
+    // ① SASSY vs 미국
+    const sassyRows = CS.SASSY.map(q => {
+      const o = ours(q.id, q.top);
+      add(q.chartLabel + ' (Yale 문항)', o, q.us, '미국 국민');
+      return { label: q.chartLabel, values: { ours: o, us: { pct: q.us } } };
+    });
+    paired($('c-sassy'), {
+      series: [OURS, US], rows: sassyRows,
+      note: `미국: ${CS.SOURCES.us.detail}. 학생 문항은 한국어 번역본입니다. ‘모르겠다’ 응답도 분모에 포함됩니다.`,
+    });
+
+    // ③ KEI
+    const groupRows = (q, id) => q.groups.map(([vals, label, bench]) => {
+      const o = ours(id, vals);
+      return { label, values: { ours: o, kei: { pct: bench } }, o, bench };
+    });
+    const impRows = groupRows(K.important, K.important.id);
+    add('기후변화는 나에게 중요하다 (KEI 문항)', impRows[0].o, impRows[0].bench, '한국 국민');
+    paired($('c-imp'), { series: [OURS, KEI], rows: impRows, note: '“중요하지 않다”가 매우 적어 막대가 짧게 보일 수 있습니다.' });
+
+    const harmRows = K.harm.targets.map(([id, label, bench]) => {
+      const o = ours(id, K.harm.top);
+      add(`피해 대상: ${label}`, o, bench, '한국 국민');
+      return { label, values: { ours: o, kei: { pct: bench } } };
+    });
+    paired($('c-harm'), { series: [OURS, KEI], rows: harmRows });
+
+    const pickRows = q => q.options.map(([v, label, desc, bench]) => {
+      const o = picked(answers, q.id, v);
+      add(`${q === K.emotions ? '감정' : '떠오르는 것'}: ${label}`, o, bench, '한국 국민');
+      return { label, sub: desc, values: { ours: o, kei: { pct: bench } } };
+    });
+    paired($('c-emo'), { series: [OURS, KEI], rows: pickRows(K.emotions) });
+    paired($('c-img'), { series: [OURS, KEI], rows: pickRows(K.images), note: 'KEI 조사의 ‘위 보기 중에 없다’(0.5%)는 학생 설문에서 뺐습니다.' });
+
+    const mediaRows = K.media.options.map(([v, label, bench]) => {
+      const o = ours(K.media.id, [v]);
+      add(`미디어는 심각성을 ${label.replace('한다', '')}`, o, bench, '한국 국민');
+      return { label, values: { ours: o, kei: { pct: bench } } };
+    });
+    const mo = ours(K.media.id, [1, 2]).pct, mu = ours(K.media.id, [4, 5]).pct;
+    paired($('c-media'), {
+      series: [OURS, KEI], rows: mediaRows,
+      note: `과장한다(①+②): 우리 반 ${fmt(mo)}% · 국민 27.0%   |   축소한다(④+⑤): 우리 반 ${fmt(mu)}% · 국민 25.7%`,
+    });
+
+    const convRows = groupRows(K.convenience, K.convenience.id);
+    convRows.forEach(r => add(`환경 vs 편리: ${r.label}`, r.o, r.bench, '한국 국민'));
+    paired($('c-conv'), { series: [OURS, KEI], rows: convRows });
+
+    // 요약: 심리적 거리
+    const kGap = ours('harm_future', K.harm.top).pct - ours('harm_self', K.harm.top).pct;
+    const sGap = ours('future', [4, 3]).pct - ours('personal', [4, 3]).pct;
+    tiles($('tiles'), [
+      { label: '우리 반 · 한국(KEI) 문항 기준', value: signed(kGap), unit: '%p', cls: 'c-ours',
+        vs: `<span class="c-kei"><span class="who"></span></span>한국 국민 +15.8%p (미래 세대 91.1% − 나 자신 75.3%)` },
+      { label: '우리 반 · 미국(Yale) 문항 기준', value: signed(sGap), unit: '%p', cls: 'c-ours',
+        vs: `<span class="c-us"><span class="who"></span></span>미국 국민 +24%p (미래 세대 68% − 나 44%)` },
+    ]);
+
+    // 요약: 차이 큰 항목 Top 5
+    comps.sort((a, b) => Math.abs(b.o - b.b) - Math.abs(a.o - a.b));
+    $('gaps').innerHTML = comps.slice(0, 5).map(c => {
+      const d = c.o - c.b;
+      return `<li>${esc(c.label)} — 우리 반 <b>${fmt(c.o)}%</b> · ${esc(c.who)} <b>${fmt(c.b)}%</b>
+        <span class="ink2">(${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}%p)</span></li>`;
+    }).join('');
+
+    renderSegments();
+
+    $('src-list').innerHTML = [
+      `우리 반: 이 수업 참여자 ${answers.length}명의 응답으로, 모집단을 대표하지 않습니다.`,
+      `한국 국민: ${CS.SOURCES.kei.detail} (가중치 적용 결과, 발표자료 수치). 문항 문구는 발표자료 기준으로 재구성했습니다.`,
+      `미국 국민(문항): ${CS.SOURCES.us.detail}.`,
+      `미국 국민(6개 유형): ${CS.SOURCES.usSeg.detail}.`,
+      'Yale SASSY(Chryst et al., 2018)는 미국 영어로 검증된 도구입니다. 한국어 번역본의 결과는 탐색적으로 해석하세요.',
+      '한국·미국 조사는 문구와 척도가 달라, 서로 다른 조사 사이의 비교는 경향을 보는 수준으로만 해석하세요.',
+    ].map(t => `<li>${esc(t)}</li>`).join('');
+  }
+
+  // ② 6개 유형
+  const SEG_DESC = {
+    Alarmed: '확신하고 매우 걱정하며 행동을 지지',
+    Concerned: '심각하다고 보지만 먼 일로 느낌',
+    Cautious: '아직 확신하지 못하고 덜 걱정',
+    Disengaged: '거의 들어보지 못해 잘 모름',
+    Doubtful: '일어나는지·인간 탓인지 의심',
+    Dismissive: '일어나지 않는다고 보고 반대',
+  };
+  function renderSegments() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(segKey)); } catch {}
+    $('seg-demo').classList.toggle('hidden', !CS_API.DEMO);
+    $('seg-setup').classList.toggle('hidden', !!saved);
+    $('seg-clear').classList.toggle('hidden', !saved);
+    if (!saved) { $('c-seg').innerHTML = ''; return; }
+    const rows = CS.SEGMENTS.map(([en, ko, us]) => ({
+      label: `${ko} (${en})`, sub: SEG_DESC[en],
+      values: { ours: { pct: saved.n ? saved.counts[en] / saved.n * 100 : 0, k: saved.counts[en], n: saved.n }, us: { pct: us } },
+    }));
+    const ac = saved.n ? (saved.counts.Alarmed + saved.counts.Concerned) / saved.n * 100 : 0;
+    paired($('c-seg'), {
+      series: [OURS, US], rows,
+      note: `경각+우려(Alarmed+Concerned): 우리 반 ${fmt(ac)}% · 미국 53%. 분류된 인원 ${saved.n}명. 미국: ${CS.SOURCES.usSeg.detail}.`,
+    });
+  }
+  function saveSegments(text) {
+    try {
+      const r = CS_STATS.segmentCounts(text);
+      localStorage.setItem(segKey, JSON.stringify(r));
+      $('seg-err').textContent = '';
+      renderSegments();
+    } catch (e) { $('seg-err').textContent = e.message; }
+  }
+  $('seg-file').onchange = async e => {
+    const f = e.target.files[0];
+    if (f) saveSegments(await f.text());
+    e.target.value = '';
+  };
+  $('seg-demo').onclick = () => saveSegments(CS_STATS.demoSegmentsCsv(answers));
+  $('seg-clear').onclick = () => { try { localStorage.removeItem(segKey); } catch {} renderSegments(); };
+
+  load();
+})();
+</script>
+</body>
+</html>
